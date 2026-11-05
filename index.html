@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Perfume Store Home</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="announce" data-t="announce">Delivery across Saudi Arabia · Pay online or cash on delivery</div>
+
+<header class="site-header">
+  <div class="wrap header-row">
+    <a class="logo" href="index.html" data-t="logo">[YOUR SHOP NAME]</a>
+    <div class="search">
+      <input type="search" data-t-placeholder="search" placeholder="Search perfumes, brands or notes" aria-label="Search perfumes, brands or notes">
+    </div>
+    <div class="header-actions">
+      <button class="btn-lang" id="lang-btn" type="button" data-t="langBtn">العربية</button>
+      <button class="btn-cart" id="cart-btn" type="button" aria-label="Shopping cart">
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.2 11H6.2L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+        <span data-t="cart">Cart</span>
+        <span class="cart-count" id="cart-count">0</span>
+      </button>
+    </div>
+  </div>
+  <nav class="main-nav" id="main-nav" aria-label="Categories">
+    <div class="wrap" id="nav-list"></div>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="wrap hero-row">
+    <div class="hero-text">
+      <div class="eyebrow" data-t="eyebrow">MULTI-BRAND PERFUME HOUSE</div>
+      <h1 data-t="h1">Find your signature scent</h1>
+      <p data-t="heroP">Arabian and designer fragrances from the brands you ask for, together in one shop.</p>
+      <div class="hero-cta">
+        <a class="btn-gold" href="#shop" data-t="cta1">Shop all perfumes</a>
+        <a class="btn-outline-light" href="#shop" data-t="cta2">Shop by brand</a>
+      </div>
+    </div>
+    <div class="hero-art">
+      <svg aria-hidden="true" width="150" height="260" viewBox="0 0 120 200"><rect x="44" y="8" width="32" height="26" rx="3" fill="#D4AF6A"/><rect x="52" y="34" width="16" height="12" fill="#B9C2BE"/><rect x="14" y="46" width="92" height="142" rx="10" fill="#3E5C76"/><rect x="26" y="68" width="68" height="60" rx="3" fill="#0E2B25" opacity="0.35"/></svg>
+      <svg aria-hidden="true" width="180" height="320" viewBox="0 0 120 200"><rect x="44" y="8" width="32" height="26" rx="3" fill="#D4AF6A"/><rect x="52" y="34" width="16" height="12" fill="#B9C2BE"/><rect x="14" y="46" width="92" height="142" rx="10" fill="#7A3B3B"/><rect x="26" y="68" width="68" height="60" rx="3" fill="#0E2B25" opacity="0.35"/></svg>
+      <svg aria-hidden="true" width="150" height="260" viewBox="0 0 120 200"><rect x="44" y="8" width="32" height="26" rx="3" fill="#D4AF6A"/><rect x="52" y="34" width="16" height="12" fill="#B9C2BE"/><rect x="14" y="46" width="92" height="142" rx="10" fill="#7A5C2E"/><rect x="26" y="68" width="68" height="60" rx="3" fill="#0E2B25" opacity="0.35"/></svg>
+    </div>
+  </div>
+  <div class="brand-strip">
+    <div class="wrap" id="brand-strip-list"></div>
+  </div>
+</section>
+
+<section class="shop" id="shop">
+  <div class="wrap">
+    <h2 data-t="shopTitle">Shop by brand</h2>
+    <p class="sub" data-t="shopSub">Choose a brand to filter the collection.</p>
+    <div class="chips" id="chips" role="group" aria-label="Filter by brand"></div>
+    <div class="grid" id="product-grid"></div>
+  </div>
+</section>
+
+<section class="trust">
+  <div class="wrap" id="trust-list"></div>
+</section>
+
+<footer class="site-footer">
+  <div class="wrap footer-grid">
+    <div>
+      <div class="footer-logo" data-t="logo">[YOUR SHOP NAME]</div>
+      <div data-t="footAbout">Original perfumes from leading Arabian and international houses, delivered across the Kingdom.</div>
+    </div>
+    <div class="footer-cols" id="foot-cols" style="display: contents"></div>
+  </div>
+  <div class="footer-legal">
+    <div class="wrap" data-t="legal">Mockup with sample prices and placeholder details. CR: [CR NUMBER] · VAT: [VAT NUMBER]</div>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Afnan 9PM | Perfume Store</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="announce">Delivery across Saudi Arabia · Pay online or cash on delivery</div>
+
+<header class="site-header">
+  <div class="wrap header-row" style="justify-content: space-between">
+    <a class="logo" href="index.html">[YOUR SHOP NAME]</a>
+    <button class="btn-cart" type="button" aria-label="Shopping cart">
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.2 11H6.2L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>
+      <span>Cart</span>
+      <span class="cart-count" id="cart-count">0</span>
+    </button>
+  </div>
+</header>
+
+<main class="wrap product-main">
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="index.html">Home</a> / <a href="index.html">Afnan</a> / <span>9PM</span>
+  </nav>
+
+  <div class="product-row">
+    <div class="gallery">
+      <div class="gallery-main">
+        <svg role="img" aria-label="Perfume bottle placeholder" width="220" height="340" viewBox="0 0 120 200"><rect x="44" y="8" width="32" height="26" rx="3" fill="#B38B3D"/><rect x="52" y="34" width="16" height="12" fill="#8C9893"/><rect x="14" y="46" width="92" height="142" rx="10" fill="#3E5C76"/><rect x="26" y="68" width="68" height="60" rx="3" fill="#FFFFFF" opacity="0.22"/></svg>
+      </div>
+      <div class="thumbs"><div></div><div></div><div></div><div></div></div>
+    </div>
+
+    <div class="details">
+      <div class="p-brand">AFNAN</div>
+      <h1 class="p-title">9PM</h1>
+      <div class="p-sub">Eau de Parfum</div>
+      <div class="p-price" id="price">SAR 139</div>
+      <div class="p-vat">Prices include VAT · [Confirm your own prices]</div>
+
+      <div class="label">Size</div>
+      <div class="sizes" id="sizes" role="group" aria-label="Choose size"></div>
+
+      <div class="buy-row">
+        <div class="qty">
+          <button type="button" id="dec" aria-label="Decrease quantity">−</button>
+          <span id="qty" aria-live="polite">1</span>
+          <button type="button" id="inc" aria-label="Increase quantity">+</button>
+        </div>
+        <button class="btn-primary" type="button" id="add-to-cart">Add to cart</button>
+      </div>
+      <a class="btn-outline" href="index.html">Order on WhatsApp</a>
+
+      <div class="p-info">
+        <div><strong>Delivery:</strong> across Saudi Arabia, packed at our shop.</div>
+        <div><strong>Payment:</strong> online, or cash on delivery on eligible orders.</div>
+        <div><strong>Pickup:</strong> from our shop in [CITY].</div>
+      </div>
+    </div>
+  </div>
+
+  <section class="panels">
+    <div class="panel">
+      <h2>Description</h2>
+      <p>[Product description: add your own text about the scent, occasion and longevity.]</p>
+    </div>
+    <div class="panel">
+      <h2>Fragrance notes</h2>
+      <div><strong>Top:</strong> [top notes]</div>
+      <div><strong>Heart:</strong> [heart notes]</div>
+      <div><strong>Base:</strong> [base notes]</div>
+    </div>
+  </section>
+
+  <section class="related">
+    <h2>You may also like</h2>
+    <div class="grid" id="related-grid"></div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-legal" style="border-top: 0">
+    <div class="wrap">Mockup with sample prices and placeholder details. CR: [CR NUMBER] · VAT: [VAT NUMBER]</div>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
