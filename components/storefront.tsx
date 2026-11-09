@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   brands,
+  defaultSize,
   type Locale,
   money,
   type Product,
   products,
 } from "@/lib/catalog";
+import { useCart } from "@/components/use-cart";
 
 type Dictionary = Record<string, string>;
 const copy: Record<Locale, Dictionary> = {
@@ -61,6 +63,34 @@ const copy: Record<Locale, Dictionary> = {
     detailPickup: "Pickup: from our shop in [CITY].",
     home: "Home",
     product: "Eau de Parfum",
+    cartLabel: "Cart, {n} items",
+    added: "Added to cart",
+    viewCart: "View cart",
+    outOfStock: "Out of stock",
+    maxInCart: "Max in cart",
+    allInCart: "All available stock is in your cart",
+    inStock: "In stock",
+    lowStock: "Only {n} left",
+    alreadyInCart: "{n} already in your cart",
+    limitedAdd: "Only {n} added: that is all the stock we have",
+    cartTitle: "Your cart",
+    cartItems: "{n} items",
+    cartEmpty: "Your cart is empty",
+    cartEmptyP: "Browse the collection and add a perfume you love.",
+    continue: "Continue shopping",
+    remove: "Remove",
+    quantity: "Quantity",
+    decrease: "Decrease quantity",
+    increase: "Increase quantity",
+    each: "{price} each",
+    maxStock: "Maximum available: {n}",
+    summary: "Order summary",
+    itemsCount: "Items",
+    subtotal: "Subtotal",
+    subtotalNote:
+      "Delivery is calculated at checkout. Prices include VAT.",
+    checkout: "Checkout (coming soon)",
+    loading: "Loading your cart…",
   },
   ar: {
     announce: "توصيل لجميع مناطق المملكة · الدفع أونلاين أو عند الاستلام",
@@ -110,10 +140,42 @@ const copy: Record<Locale, Dictionary> = {
     detailPickup: "الاستلام: من متجرنا في [المدينة].",
     home: "الرئيسية",
     product: "أو دو بارفان",
+    cartLabel: "السلة، {n} منتجات",
+    added: "تمت الإضافة إلى السلة",
+    viewCart: "عرض السلة",
+    outOfStock: "نفدت الكمية",
+    maxInCart: "الحد الأقصى في السلة",
+    allInCart: "كل الكمية المتوفرة موجودة في سلتك",
+    inStock: "متوفر",
+    lowStock: "متبقي {n} فقط",
+    alreadyInCart: "{n} في سلتك حالياً",
+    limitedAdd: "تمت إضافة {n} فقط، وهي كل الكمية المتوفرة",
+    cartTitle: "سلة التسوق",
+    cartItems: "{n} منتجات",
+    cartEmpty: "سلتك فارغة",
+    cartEmptyP: "تصفح المجموعة وأضف عطراً يعجبك.",
+    continue: "متابعة التسوق",
+    remove: "إزالة",
+    quantity: "الكمية",
+    decrease: "تقليل الكمية",
+    increase: "زيادة الكمية",
+    each: "{price} للقطعة",
+    maxStock: "الحد الأقصى المتوفر: {n}",
+    summary: "ملخص الطلب",
+    itemsCount: "عدد المنتجات",
+    subtotal: "المجموع الفرعي",
+    subtotalNote: "تُحسب رسوم التوصيل عند الدفع. الأسعار تشمل الضريبة.",
+    checkout: "إتمام الطلب (قريباً)",
+    loading: "جارٍ تحميل السلة…",
   },
 };
 
-function Bottle({ tone, small = false }: { tone: string; small?: boolean }) {
+function fmt(template: string, values: Record<string, string | number>) {
+  return template.replace(/\{(\w+)\}/g, (_, key) => String(values[key] ?? ""));
+}
+
+
+export function Bottle({ tone, small = false }: { tone: string; small?: boolean }) {
   return (
     <svg
       aria-hidden="true"
@@ -141,13 +203,13 @@ export function AnnouncementBar({ text }: { text: string }) {
 }
 
 export function Header(
-  { locale, onLocaleChange, cart }: {
+  { locale, onLocaleChange }: {
     locale: Locale;
     onLocaleChange: () => void;
-    cart: number;
   },
 ) {
   const t = copy[locale];
+  const { count } = useCart();
   return (
     <>
       <AnnouncementBar text={t.announce} />
@@ -161,11 +223,17 @@ export function Header(
             <button className="btn-lang" type="button" onClick={onLocaleChange}>
               {locale === "en" ? "العربية" : "English"}
             </button>
-            <button className="btn-cart" type="button" aria-label={t.cart}>
+            <Link
+              className="btn-cart"
+              href="/cart"
+              aria-label={fmt(t.cartLabel, { n: count })}
+            >
               <CartIcon />
               <span>{t.cart}</span>
-              <span className="cart-count">{cart}</span>
-            </button>
+              <span className="cart-count" data-testid="cart-count">
+                {count}
+              </span>
+            </Link>
           </div>
         </div>
         <Navigation locale={locale} />
@@ -225,13 +293,23 @@ export function BrandStrip({ locale }: { locale: Locale }) {
 }
 
 export function ProductCard(
-  { product, locale, onAdd }: {
+  { product, locale, showAdd = false }: {
     product: Product;
     locale: Locale;
-    onAdd?: () => void;
+    showAdd?: boolean;
   },
 ) {
   const t = copy[locale];
+  const size = defaultSize(product);
+  const { add, inCart } = useCart();
+  const [justAdded, setJustAdded] = useState(false);
+  useEffect(() => {
+    if (!justAdded) return;
+    const timer = window.setTimeout(() => setJustAdded(false), 1800);
+    return () => window.clearTimeout(timer);
+  }, [justAdded]);
+  const soldOut = size.stock === 0;
+  const maxed = !soldOut && inCart(product.slug, size.ml) >= size.stock;
   const name = locale === "ar" ? product.nameAr : product.name;
   const brand = locale === "ar" ? product.brandAr : product.brand;
   return (
@@ -248,11 +326,24 @@ export function ProductCard(
         <Link className="card-name" href={`/products/${product.slug}`}>
           {name}
         </Link>
-        <div className="card-spec">{t.product} · 100 ml</div>
-        <div className="card-price">{money(product.price, locale)}</div>
-        {onAdd && (
-          <button className="btn-add" type="button" onClick={onAdd}>
-            {t.add}
+        <div className="card-spec">{t.product} · {size.ml} ml</div>
+        <div className="card-price">{money(size.price, locale)}</div>
+        {showAdd && (
+          <button
+            className="btn-add"
+            type="button"
+            disabled={soldOut || maxed}
+            onClick={() => {
+              if (add(product.slug, size.ml, 1) > 0) setJustAdded(true);
+            }}
+          >
+            {soldOut
+              ? t.outOfStock
+              : maxed
+              ? t.maxInCart
+              : justAdded
+              ? `${t.added} ✓`
+              : t.add}
           </button>
         )}
       </div>
@@ -260,10 +351,9 @@ export function ProductCard(
   );
 }
 export function ProductGrid(
-  { items, locale, onAdd }: {
+  { items, locale }: {
     items: Product[];
     locale: Locale;
-    onAdd: () => void;
   },
 ) {
   return (
@@ -273,7 +363,7 @@ export function ProductGrid(
           key={product.slug}
           product={product}
           locale={locale}
-          onAdd={onAdd}
+          showAdd
         />
       ))}
     </div>
@@ -339,7 +429,6 @@ function Trust({ locale }: { locale: Locale }) {
 export function HomeStorefront() {
   const [locale, setLocale] = useState<Locale>("en");
   const [activeBrand, setActiveBrand] = useState("All brands");
-  const [cart, setCart] = useState(0);
   const t = copy[locale];
   const visibleProducts = useMemo(
     () =>
@@ -364,7 +453,6 @@ export function HomeStorefront() {
       <Header
         locale={locale}
         onLocaleChange={() => setLocale(locale === "en" ? "ar" : "en")}
-        cart={cart}
       />
       <Hero locale={locale} />
       <section className="shop" id="shop">
@@ -384,11 +472,7 @@ export function HomeStorefront() {
               </button>
             ))}
           </div>
-          <ProductGrid
-            items={visibleProducts}
-            locale={locale}
-            onAdd={() => setCart((count) => count + 1)}
-          />
+          <ProductGrid items={visibleProducts} locale={locale} />
         </div>
       </section>
       <Trust locale={locale} />
@@ -416,23 +500,45 @@ export function ProductGallery({ product }: { product: Product }) {
 }
 
 export function ProductDetails(
-  { product, locale, onAdd }: {
-    product: Product;
-    locale: Locale;
-    onAdd: (quantity: number) => void;
-  },
+  { product, locale }: { product: Product; locale: Locale },
 ) {
   const t = copy[locale];
-  const [size, setSize] = useState(product.sizes[product.sizes.length - 1]);
+  const { add, inCart, hydrated } = useCart();
+  const [size, setSize] = useState(() => defaultSize(product));
   const [quantity, setQuantity] = useState(1);
+  const [status, setStatus] = useState<string | null>(null);
   const name = locale === "ar" ? product.nameAr : product.name;
   const brand = locale === "ar" ? product.brandAr : product.brand;
+  const already = inCart(product.slug, size.ml);
+  // Units of the selected size that can still go into the cart.
+  const available = Math.max(0, size.stock - already);
+  const soldOut = size.stock === 0;
+  const effectiveQuantity = Math.max(1, Math.min(quantity, available));
+
+  const chooseSize = (option: typeof size) => {
+    setSize(option);
+    setQuantity(1);
+    setStatus(null);
+  };
+  const handleAdd = () => {
+    const added = add(product.slug, size.ml, effectiveQuantity);
+    if (added === 0) return;
+    setStatus(
+      added < effectiveQuantity
+        ? fmt(t.limitedAdd, { n: added })
+        : `${t.added}: ${name} · ${size.ml} ml × ${added}`,
+    );
+    setQuantity(1);
+  };
+
   return (
     <div className="details">
       <div className="p-brand">{brand}</div>
       <h1 className="p-title">{name}</h1>
-      <div className="p-sub">{t.product}</div>
-      <div className="p-price">{money(size.price * quantity, locale)}</div>
+      <div className="p-sub">{t.product} · {size.ml} ml</div>
+      <div className="p-price" data-testid="product-price">
+        {money(size.price, locale)}
+      </div>
       <div className="p-vat">{t.vat}</div>
       <div className="label">{t.size}</div>
       <div className="sizes" role="group" aria-label={t.size}>
@@ -442,26 +548,41 @@ export function ProductDetails(
             type="button"
             key={option.ml}
             aria-pressed={size.ml === option.ml}
-            onClick={() => setSize(option)}
+            onClick={() => chooseSize(option)}
           >
             {option.ml} ml
           </button>
         ))}
       </div>
+      <div className="stock-note" data-testid="stock-note">
+        {soldOut
+          ? t.outOfStock
+          : size.stock <= 5
+          ? fmt(t.lowStock, { n: size.stock })
+          : t.inStock}
+        {hydrated && already > 0 && (
+          <span> · {fmt(t.alreadyInCart, { n: already })}</span>
+        )}
+      </div>
       <div className="buy-row">
         <div className="qty">
           <button
             type="button"
-            onClick={() => setQuantity(Math.max(1, quantity - 1))}
-            aria-label="Decrease quantity"
+            disabled={effectiveQuantity <= 1}
+            onClick={() => setQuantity(Math.max(1, effectiveQuantity - 1))}
+            aria-label={t.decrease}
           >
             −
           </button>
-          <span aria-live="polite">{quantity}</span>
+          <span aria-live="polite" data-testid="product-qty">
+            {effectiveQuantity}
+          </span>
           <button
             type="button"
-            onClick={() => setQuantity(quantity + 1)}
-            aria-label="Increase quantity"
+            disabled={effectiveQuantity >= available}
+            onClick={() =>
+              setQuantity(Math.min(available, effectiveQuantity + 1))}
+            aria-label={t.increase}
           >
             +
           </button>
@@ -469,10 +590,18 @@ export function ProductDetails(
         <button
           className="btn-primary"
           type="button"
-          onClick={() => onAdd(quantity)}
+          disabled={available === 0}
+          onClick={handleAdd}
         >
-          {t.add}
+          {soldOut ? t.outOfStock : available === 0 ? t.allInCart : t.add}
         </button>
+      </div>
+      <div className="add-status" role="status">
+        {status && (
+          <>
+            {status} · <Link href="/cart">{t.viewCart}</Link>
+          </>
+        )}
       </div>
       <a
         className="btn-outline"
@@ -493,7 +622,6 @@ export function ProductDetails(
 
 export function ProductStorefront({ product }: { product: Product }) {
   const [locale, setLocale] = useState<Locale>("en");
-  const [cart, setCart] = useState(0);
   const t = copy[locale];
   const related = products.filter((item) => item.slug !== product.slug).slice(
     0,
@@ -507,7 +635,6 @@ export function ProductStorefront({ product }: { product: Product }) {
       <Header
         locale={locale}
         onLocaleChange={() => setLocale(locale === "en" ? "ar" : "en")}
-        cart={cart}
       />
       <div className="wrap product-main">
         <nav className="breadcrumb" aria-label="Breadcrumb">
@@ -519,11 +646,7 @@ export function ProductStorefront({ product }: { product: Product }) {
         </nav>
         <div className="product-row">
           <ProductGallery product={product} />
-          <ProductDetails
-            product={product}
-            locale={locale}
-            onAdd={(quantity) => setCart((count) => count + quantity)}
-          />
+          <ProductDetails product={product} locale={locale} />
         </div>
         <section className="panels">
           <div className="panel">
@@ -554,6 +677,145 @@ export function ProductStorefront({ product }: { product: Product }) {
             ))}
           </div>
         </section>
+      </div>
+      <Footer locale={locale} />
+    </main>
+  );
+}
+
+export function CartStorefront() {
+  const [locale, setLocale] = useState<Locale>("en");
+  const t = copy[locale];
+  const { hydrated, lines, count, subtotal, setQuantity, remove } = useCart();
+  return (
+    <main lang={locale} dir={locale === "ar" ? "rtl" : "ltr"}>
+      <Header
+        locale={locale}
+        onLocaleChange={() => setLocale(locale === "en" ? "ar" : "en")}
+      />
+      <div className="wrap cart-main">
+        <nav className="breadcrumb" aria-label="Breadcrumb">
+          <Link href="/">{t.home}</Link>
+          <span>/</span>
+          <span>{t.cart}</span>
+        </nav>
+        <h1 className="cart-title">{t.cartTitle}</h1>
+        {!hydrated
+          ? <p className="cart-loading">{t.loading}</p>
+          : lines.length === 0
+          ? (
+            <section className="cart-empty" data-testid="cart-empty">
+              <CartIcon />
+              <h2>{t.cartEmpty}</h2>
+              <p>{t.cartEmptyP}</p>
+              <Link className="btn-gold" href="/#shop">{t.continue}</Link>
+            </section>
+          )
+          : (
+            <div className="cart-layout">
+              <ul className="cart-lines" aria-label={t.cartTitle}>
+                {lines.map((line) => {
+                  const name = locale === "ar"
+                    ? line.product.nameAr
+                    : line.product.name;
+                  const brand = locale === "ar"
+                    ? line.product.brandAr
+                    : line.product.brand;
+                  const href = `/products/${line.product.slug}`;
+                  return (
+                    <li
+                      className="cart-line"
+                      key={line.id}
+                      data-testid="cart-line"
+                      data-variant={line.id}
+                    >
+                      <Link
+                        className="cart-line-img"
+                        href={href}
+                        aria-label={name}
+                      >
+                        <Bottle tone={line.product.tone} small />
+                      </Link>
+                      <div className="cart-line-info">
+                        <div className="card-brand">{brand}</div>
+                        <Link className="cart-line-name" href={href}>
+                          {name}
+                        </Link>
+                        <div className="card-spec" data-testid="line-size">
+                          {t.product} · {line.size.ml} ml
+                        </div>
+                        <div className="card-spec" data-testid="line-unit">
+                          {fmt(t.each, {
+                            price: money(line.unitPrice, locale),
+                          })}
+                        </div>
+                        {line.quantity >= line.size.stock && (
+                          <div className="cart-line-limit">
+                            {fmt(t.maxStock, { n: line.size.stock })}
+                          </div>
+                        )}
+                      </div>
+                      <div className="cart-line-actions">
+                        <div
+                          className="qty qty-small"
+                          role="group"
+                          aria-label={`${t.quantity}: ${name} ${line.size.ml} ml`}
+                        >
+                          <button
+                            type="button"
+                            disabled={line.quantity <= 1}
+                            aria-label={t.decrease}
+                            onClick={() =>
+                              setQuantity(line.slug, line.ml, line.quantity - 1)}
+                          >
+                            −
+                          </button>
+                          <span aria-live="polite" data-testid="line-qty">
+                            {line.quantity}
+                          </span>
+                          <button
+                            type="button"
+                            disabled={line.quantity >= line.size.stock}
+                            aria-label={t.increase}
+                            onClick={() =>
+                              setQuantity(line.slug, line.ml, line.quantity + 1)}
+                          >
+                            +
+                          </button>
+                        </div>
+                        <div className="cart-line-total" data-testid="line-total">
+                          {money(line.lineTotal, locale)}
+                        </div>
+                        <button
+                          className="btn-remove"
+                          type="button"
+                          onClick={() => remove(line.slug, line.ml)}
+                        >
+                          {t.remove}
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+              <aside className="cart-summary" aria-label={t.summary}>
+                <h2>{t.summary}</h2>
+                <div className="summary-row">
+                  <span>{t.itemsCount}</span>
+                  <span data-testid="summary-count">{count}</span>
+                </div>
+                <div className="summary-row summary-total">
+                  <span>{t.subtotal}</span>
+                  <span data-testid="subtotal">{money(subtotal, locale)}</span>
+                </div>
+                <p className="summary-note">{t.subtotalNote}</p>
+                <button className="btn-primary" type="button" disabled>
+                  {t.checkout}
+                </button>
+                <Link className="btn-outline" href="/#shop">{t.continue}</Link>
+              </aside>
+            </div>
+          )}
       </div>
       <Footer locale={locale} />
     </main>
