@@ -1,5 +1,12 @@
 export type Locale = "en" | "ar";
 
+export type ProductSize = {
+  ml: number;
+  price: number;
+  /** Units available to sell. 0 means out of stock. */
+  stock: number;
+};
+
 export type Product = {
   slug: string;
   brand: string;
@@ -8,7 +15,8 @@ export type Product = {
   nameAr: string;
   price: number;
   tone: string;
-  sizes: { ml: number; price: number }[];
+  /** Each size is a separate purchasable variant with its own price and stock. */
+  sizes: ProductSize[];
   description: string;
   descriptionAr: string;
   notes: {
@@ -39,10 +47,11 @@ export const products: Product[] = [
     nameAr: "9PM",
     price: 139,
     tone: "#3E5C76",
-    sizes: [{ ml: 30, price: 49 }, { ml: 50, price: 89 }, {
-      ml: 100,
-      price: 139,
-    }],
+    sizes: [
+      { ml: 30, price: 49, stock: 3 },
+      { ml: 50, price: 89, stock: 8 },
+      { ml: 100, price: 139, stock: 12 },
+    ],
     description:
       "A warm and confident scent for evenings and special occasions.",
     descriptionAr: "عطر دافئ وواثق للأمسيات والمناسبات الخاصة.",
@@ -63,7 +72,7 @@ export const products: Product[] = [
     nameAr: "توراثي بلو",
     price: 159,
     tone: "#2D4F6E",
-    sizes: [{ ml: 100, price: 159 }],
+    sizes: [{ ml: 100, price: 159, stock: 6 }],
     description: "A fresh, elegant fragrance with a refined presence.",
     descriptionAr: "عطر منعش وأنيق بحضور راقٍ.",
     notes: {
@@ -83,7 +92,7 @@ export const products: Product[] = [
     nameAr: "خمرة",
     price: 129,
     tone: "#7A3B3B",
-    sizes: [{ ml: 100, price: 129 }],
+    sizes: [{ ml: 100, price: 129, stock: 2 }],
     description: "A rich, sweet scent with an inviting oriental character.",
     descriptionAr: "عطر غني وحلو بطابع شرقي جذاب.",
     notes: {
@@ -103,7 +112,7 @@ export const products: Product[] = [
     nameAr: "أسد",
     price: 119,
     tone: "#5E3A2A",
-    sizes: [{ ml: 100, price: 119 }],
+    sizes: [{ ml: 100, price: 119, stock: 10 }],
     description: "A bold spicy fragrance for a memorable signature.",
     descriptionAr: "عطر جريء وتوابلي لتوقيع لا يُنسى.",
     notes: {
@@ -123,7 +132,7 @@ export const products: Product[] = [
     nameAr: "مرج",
     price: 99,
     tone: "#7A5C2E",
-    sizes: [{ ml: 100, price: 99 }],
+    sizes: [{ ml: 100, price: 99, stock: 15 }],
     description: "An inviting Arabian fragrance for everyday wear.",
     descriptionAr: "عطر عربي جذاب للاستخدام اليومي.",
     notes: {
@@ -143,7 +152,7 @@ export const products: Product[] = [
     nameAr: "إغنايت",
     price: 149,
     tone: "#6B4F25",
-    sizes: [{ ml: 100, price: 149 }],
+    sizes: [{ ml: 100, price: 149, stock: 0 }],
     description: "A sophisticated woody composition.",
     descriptionAr: "تركيبة خشبية راقية.",
     notes: {
@@ -163,7 +172,7 @@ export const products: Product[] = [
     nameAr: "كلوب دي نوي إنتنس مان",
     price: 169,
     tone: "#2E4F4A",
-    sizes: [{ ml: 100, price: 169 }],
+    sizes: [{ ml: 100, price: 169, stock: 9 }],
     description: "A confident, contemporary fragrance for any occasion.",
     descriptionAr: "عطر عصري وواثق لكل مناسبة.",
     notes: {
@@ -183,7 +192,7 @@ export const products: Product[] = [
     nameAr: "أمبر عود",
     price: 189,
     tone: "#5B4A6B",
-    sizes: [{ ml: 100, price: 189 }],
+    sizes: [{ ml: 100, price: 189, stock: 4 }],
     description: "A smooth amber and oud composition with lasting depth.",
     descriptionAr: "تركيبة ناعمة من العنبر والعود بعمق يدوم.",
     notes: {
@@ -196,6 +205,15 @@ export const products: Product[] = [
     },
   },
 ];
+
+export function findProduct(slug: string): Product | undefined {
+  return products.find((product) => product.slug === slug);
+}
+
+/** The size shown on product cards and pre-selected on the product page. */
+export function defaultSize(product: Product): ProductSize {
+  return product.sizes[product.sizes.length - 1];
+}
 
 export function money(value: number, locale: Locale) {
   return locale === "ar" ? `${value} ر.س` : `SAR ${value}`;
