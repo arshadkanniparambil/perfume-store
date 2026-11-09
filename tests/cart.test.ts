@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { type Product, products } from "../lib/catalog.ts";
+import type { Product } from "../lib/catalog.ts";
+import { sampleProducts as products } from "../lib/sample-catalog.ts";
 import {
   addItem,
   type Cart,
@@ -27,9 +28,9 @@ const catalog: Product[] = [
     name: "Multi",
     tone: "#111111",
     sizes: [
-      { ml: 30, price: 49, stock: 3 },
-      { ml: 50, price: 89, stock: 8 },
-      { ml: 100, price: 139, stock: 12 },
+      { sku: "S-30", ml: 30, priceHalalas: 4900, stock: 3 },
+      { sku: "S-50", ml: 50, priceHalalas: 8900, stock: 8 },
+      { sku: "S-100", ml: 100, priceHalalas: 13900, stock: 12 },
     ],
   },
   {
@@ -37,14 +38,14 @@ const catalog: Product[] = [
     slug: "single",
     name: "Single",
     tone: "#222222",
-    sizes: [{ ml: 100, price: 129, stock: 2 }],
+    sizes: [{ sku: "S-100", ml: 100, priceHalalas: 12900, stock: 2 }],
   },
   {
     ...base,
     slug: "soldout",
     name: "Sold out",
     tone: "#333333",
-    sizes: [{ ml: 100, price: 149, stock: 0 }],
+    sizes: [{ sku: "S-100", ml: 100, priceHalalas: 14900, stock: 0 }],
   },
 ];
 
@@ -181,7 +182,7 @@ describe("totals and display data", () => {
   });
 
   test("subtotal uses each size's own price", () => {
-    assert.equal(cartSubtotal(cart, catalog), 2 * 49 + 139 + 2 * 129);
+    assert.equal(cartSubtotal(cart, catalog), 2 * 4900 + 13900 + 2 * 12900);
   });
 
   test("resolved lines carry the right product, image tone, size and price", () => {
@@ -190,14 +191,14 @@ describe("totals and display data", () => {
     assert.equal(small.product.name, "Multi");
     assert.equal(small.product.tone, "#111111");
     assert.equal(small.size.ml, 30);
-    assert.equal(small.unitPrice, 49);
-    assert.equal(small.lineTotal, 98);
+    assert.equal(small.unitPriceHalalas, 4900);
+    assert.equal(small.lineTotalHalalas, 9800);
     const large = lines.find((line) => line.id === "multi::100")!;
     assert.equal(large.size.ml, 100);
-    assert.equal(large.unitPrice, 139);
+    assert.equal(large.unitPriceHalalas, 13900);
     const single = lines.find((line) => line.id === "single::100")!;
     assert.equal(single.product.tone, "#222222");
-    assert.equal(single.lineTotal, 258);
+    assert.equal(single.lineTotalHalalas, 25800);
   });
 
   test("prices come from the catalog, not from stored data", () => {
@@ -205,11 +206,14 @@ describe("totals and display data", () => {
       product.slug === "multi"
         ? {
           ...product,
-          sizes: product.sizes.map((size) => ({ ...size, price: size.price + 1 })),
+          sizes: product.sizes.map((size) => ({
+            ...size,
+            priceHalalas: size.priceHalalas + 50,
+          })),
         }
         : product
     );
-    assert.equal(cartSubtotal(cart, repriced), 2 * 50 + 140 + 2 * 129);
+    assert.equal(cartSubtotal(cart, repriced), 2 * 4950 + 13950 + 2 * 12900);
   });
 });
 
@@ -217,7 +221,7 @@ describe("persistence", () => {
   test("serialize → deserialize round-trips the cart", () => {
     let cart = add(emptyCart, "multi", 30, 2).cart;
     cart = add(cart, "multi", 100).cart;
-    const restored = deserializeCart(serializeCart(cart), catalog);
+    const restored = deserializeCart(serializeCart(cart));
     assert.deepEqual(restored, cart);
   });
 
@@ -229,10 +233,24 @@ describe("persistence", () => {
   });
 
   test("missing or corrupt storage gives an empty cart", () => {
-    assert.deepEqual(deserializeCart(null, catalog), []);
-    assert.deepEqual(deserializeCart("", catalog), []);
-    assert.deepEqual(deserializeCart("{not json", catalog), []);
-    assert.deepEqual(deserializeCart('{"slug":"multi"}', catalog), []);
+    assert.deepEqual(deserializeCart(null), []);
+    assert.deepEqual(deserializeCart(""), []);
+    assert.deepEqual(deserializeCart("{not json"), []);
+    assert.deepEqual(deserializeCart('{"slug":"multi"}'), []);
+  });
+
+  test("reading storage keeps only well-formed lines and merges duplicates", () => {
+    const stored = JSON.stringify([
+      { slug: "multi", ml: 50, quantity: 2 },
+      { slug: "multi", ml: 50, quantity: 1 },
+      { slug: "multi", ml: 30, quantity: 1.5 },
+      { slug: "multi", ml: 30, quantity: 0 },
+      { slug: 5, ml: 30, quantity: 1 },
+      null,
+    ]);
+    assert.deepEqual(deserializeCart(stored), [
+      { slug: "multi", ml: 50, quantity: 3 },
+    ]);
   });
 
   test("sanitizing drops bad lines, merges duplicates and clamps to stock", () => {
@@ -255,20 +273,24 @@ describe("persistence", () => {
 });
 
 describe("store catalog", () => {
-  test("every size has a non-negative integer stock", () => {
+  test("every size has integer halalas, stock and a unique SKU", () => {
+    const skus = new Set<string>();
     for (const product of products) {
       for (const size of product.sizes) {
-        assert.ok(
-          Number.isInteger(size.stock) && size.stock >= 0,
-          `${product.slug} ${size.ml} ml`,
-        );
+        const label = `${product.slug} ${size.ml} ml`;
+        assert.ok(Number.isInteger(size.stock) && size.stock >= 0, label);
+        assert.ok(Number.isInteger(size.priceHalalas) && size.priceHalalas > 0, label);
+        assert.match(size.sku, /^[A-Z0-9]+(-[A-Z0-9]+)*$/, label);
+        assert.ok(!skus.has(size.sku), `duplicate ${size.sku}`);
+        skus.add(size.sku);
       }
     }
   });
 
-  test("works against the real catalog by default", () => {
-    const { cart } = addItem(emptyCart, "afnan-9pm", 30);
-    assert.equal(cartSubtotal(cart), 49);
-    assert.equal(resolveCart(cart)[0].size.ml, 30);
+  test("works against the sample catalog", () => {
+    const { cart } = addItem(emptyCart, "afnan-9pm", 30, 1, products);
+    assert.equal(cartSubtotal(cart, products), 4900);
+    assert.equal(resolveCart(cart, products)[0].size.ml, 30);
+    assert.equal(resolveCart(cart, products)[0].size.sku, "AFNAN-9PM-30ML");
   });
 });

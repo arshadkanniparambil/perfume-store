@@ -1,16 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  brands,
   defaultSize,
   type Locale,
   money,
   type Product,
-  products,
 } from "@/lib/catalog";
+import type { CartValidationResult } from "@/lib/validation";
 import { useCart } from "@/components/use-cart";
+import { useCatalog } from "@/components/catalog-context";
 
 type Dictionary = Record<string, string>;
 const copy: Record<Locale, Dictionary> = {
@@ -91,6 +91,9 @@ const copy: Record<Locale, Dictionary> = {
       "Delivery is calculated at checkout. Prices include VAT.",
     checkout: "Checkout (coming soon)",
     loading: "Loading your cart…",
+    allBrands: "All brands",
+    cartAdjusted:
+      "Some items changed since you added them. Quantities were updated to match current stock.",
   },
   ar: {
     announce: "توصيل لجميع مناطق المملكة · الدفع أونلاين أو عند الاستلام",
@@ -167,6 +170,9 @@ const copy: Record<Locale, Dictionary> = {
     subtotalNote: "تُحسب رسوم التوصيل عند الدفع. الأسعار تشمل الضريبة.",
     checkout: "إتمام الطلب (قريباً)",
     loading: "جارٍ تحميل السلة…",
+    allBrands: "كل الماركات",
+    cartAdjusted:
+      "تغيّرت بعض المنتجات منذ إضافتها، فتم تحديث الكميات حسب المخزون الحالي.",
   },
 };
 
@@ -195,6 +201,26 @@ export function Bottle({ tone, small = false }: { tone: string; small?: boolean 
         opacity=".22"
       />
     </svg>
+  );
+}
+
+/** Shows the product's first photo, or a coloured bottle when it has none. */
+export function ProductImage(
+  { product, locale, small = false }: {
+    product: Product;
+    locale: Locale;
+    small?: boolean;
+  },
+) {
+  const image = product.images[0];
+  if (!image) return <Bottle tone={product.tone} small={small} />;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      className={small ? "product-photo product-photo-small" : "product-photo"}
+      src={image.url}
+      alt={(locale === "ar" ? image.altAr : image.alt) || ""}
+    />
   );
 }
 
@@ -319,7 +345,7 @@ export function ProductCard(
         href={`/products/${product.slug}`}
         aria-label={name}
       >
-        <Bottle tone={product.tone} small />
+        <ProductImage product={product} locale={locale} small />
       </Link>
       <div className="card-body">
         <div className="card-brand">{brand}</div>
@@ -327,7 +353,7 @@ export function ProductCard(
           {name}
         </Link>
         <div className="card-spec">{t.product} · {size.ml} ml</div>
-        <div className="card-price">{money(size.price, locale)}</div>
+        <div className="card-price">{money(size.priceHalalas, locale)}</div>
         {showAdd && (
           <button
             className="btn-add"
@@ -428,26 +454,29 @@ function Trust({ locale }: { locale: Locale }) {
 
 export function HomeStorefront() {
   const [locale, setLocale] = useState<Locale>("en");
-  const [activeBrand, setActiveBrand] = useState("All brands");
+  const [activeBrand, setActiveBrand] = useState<string | null>(null);
   const t = copy[locale];
+  const catalog = useCatalog();
+  const brandOptions = useMemo(() => {
+    const seen = new Map<string, { slug: string; name: string; nameAr: string }>();
+    for (const item of catalog) {
+      if (!seen.has(item.brandSlug)) {
+        seen.set(item.brandSlug, {
+          slug: item.brandSlug,
+          name: item.brand,
+          nameAr: item.brandAr,
+        });
+      }
+    }
+    return [...seen.values()];
+  }, [catalog]);
   const visibleProducts = useMemo(
     () =>
-      activeBrand === "All brands"
-        ? products
-        : products.filter((item) => item.brand === activeBrand),
-    [activeBrand],
+      activeBrand === null
+        ? [...catalog]
+        : catalog.filter((item) => item.brandSlug === activeBrand),
+    [activeBrand, catalog],
   );
-  const localizedBrand = (brand: string) =>
-    locale === "ar"
-      ? ({
-        "All brands": "كل الماركات",
-        Afnan: "أفنان",
-        Lattafa: "لطافة",
-        "Ahmed Al Maghribi": "أحمد المغربي",
-        Armaf: "أرماف",
-        "Al Haramain": "الحرمين",
-      }[brand] ?? brand)
-      : brand;
   return (
     <main lang={locale} dir={locale === "ar" ? "rtl" : "ltr"}>
       <Header
@@ -460,15 +489,23 @@ export function HomeStorefront() {
           <h2>{t.shopTitle}</h2>
           <p className="sub">{t.shopSub}</p>
           <div className="chips" role="group" aria-label={t.byBrand}>
-            {brands.map((brand) => (
+            <button
+              className="chip"
+              type="button"
+              aria-pressed={activeBrand === null}
+              onClick={() => setActiveBrand(null)}
+            >
+              {t.allBrands}
+            </button>
+            {brandOptions.map((brand) => (
               <button
                 className="chip"
                 type="button"
-                key={brand}
-                aria-pressed={activeBrand === brand}
-                onClick={() => setActiveBrand(brand)}
+                key={brand.slug}
+                aria-pressed={activeBrand === brand.slug}
+                onClick={() => setActiveBrand(brand.slug)}
               >
-                {localizedBrand(brand)}
+                {locale === "ar" ? brand.nameAr : brand.name}
               </button>
             ))}
           </div>
@@ -481,15 +518,17 @@ export function HomeStorefront() {
   );
 }
 
-export function ProductGallery({ product }: { product: Product }) {
+export function ProductGallery(
+  { product, locale }: { product: Product; locale: Locale },
+) {
   return (
     <div className="gallery">
       <div className="gallery-main">
-        <Bottle tone={product.tone} />
+        <ProductImage product={product} locale={locale} />
       </div>
       <div className="thumbs" aria-label="Product images">
         <button className="active" aria-label="Main product image">
-          <Bottle tone={product.tone} small />
+          <ProductImage product={product} locale={locale} small />
         </button>
         <button aria-label="Product thumbnail" />
         <button aria-label="Product thumbnail" />
@@ -537,7 +576,7 @@ export function ProductDetails(
       <h1 className="p-title">{name}</h1>
       <div className="p-sub">{t.product} · {size.ml} ml</div>
       <div className="p-price" data-testid="product-price">
-        {money(size.price, locale)}
+        {money(size.priceHalalas, locale)}
       </div>
       <div className="p-vat">{t.vat}</div>
       <div className="label">{t.size}</div>
@@ -623,7 +662,8 @@ export function ProductDetails(
 export function ProductStorefront({ product }: { product: Product }) {
   const [locale, setLocale] = useState<Locale>("en");
   const t = copy[locale];
-  const related = products.filter((item) => item.slug !== product.slug).slice(
+  const catalog = useCatalog();
+  const related = catalog.filter((item) => item.slug !== product.slug).slice(
     0,
     4,
   );
@@ -645,7 +685,7 @@ export function ProductStorefront({ product }: { product: Product }) {
           <span>{locale === "ar" ? product.nameAr : product.name}</span>
         </nav>
         <div className="product-row">
-          <ProductGallery product={product} />
+          <ProductGallery product={product} locale={locale} />
           <ProductDetails product={product} locale={locale} />
         </div>
         <section className="panels">
@@ -686,7 +726,36 @@ export function ProductStorefront({ product }: { product: Product }) {
 export function CartStorefront() {
   const [locale, setLocale] = useState<Locale>("en");
   const t = copy[locale];
-  const { hydrated, lines, count, subtotal, setQuantity, remove } = useCart();
+  const { hydrated, lines, count, subtotalHalalas, setQuantity, remove } =
+    useCart();
+  const [adjusted, setAdjusted] = useState(false);
+  const checked = useRef(false);
+
+  // Once per visit, ask the server to check the cart against live stock and
+  // prices, and apply any corrections it returns.
+  useEffect(() => {
+    if (!hydrated || checked.current || lines.length === 0) return;
+    checked.current = true;
+    const items = lines.map(({ slug, ml, quantity }) => ({ slug, ml, quantity }));
+    fetch("/api/cart/validate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items }),
+    })
+      .then((response) => response.ok ? response.json() : null)
+      .then((result: CartValidationResult | null) => {
+        if (!result || result.valid) return;
+        for (const line of result.items) {
+          if (line.status === "ok") continue;
+          if (line.quantity === 0) remove(line.slug, line.ml);
+          else setQuantity(line.slug, line.ml, line.quantity);
+        }
+        setAdjusted(true);
+      })
+      .catch(() => {
+        // Offline or server error: keep showing the cart as stored.
+      });
+  }, [hydrated, lines, remove, setQuantity]);
   return (
     <main lang={locale} dir={locale === "ar" ? "rtl" : "ltr"}>
       <Header
@@ -700,6 +769,9 @@ export function CartStorefront() {
           <span>{t.cart}</span>
         </nav>
         <h1 className="cart-title">{t.cartTitle}</h1>
+        {adjusted && (
+          <p className="cart-notice" role="status">{t.cartAdjusted}</p>
+        )}
         {!hydrated
           ? <p className="cart-loading">{t.loading}</p>
           : lines.length === 0
@@ -734,7 +806,11 @@ export function CartStorefront() {
                         href={href}
                         aria-label={name}
                       >
-                        <Bottle tone={line.product.tone} small />
+                        <ProductImage
+                          product={line.product}
+                          locale={locale}
+                          small
+                        />
                       </Link>
                       <div className="cart-line-info">
                         <div className="card-brand">{brand}</div>
@@ -746,7 +822,7 @@ export function CartStorefront() {
                         </div>
                         <div className="card-spec" data-testid="line-unit">
                           {fmt(t.each, {
-                            price: money(line.unitPrice, locale),
+                            price: money(line.unitPriceHalalas, locale),
                           })}
                         </div>
                         {line.quantity >= line.size.stock && (
@@ -784,7 +860,7 @@ export function CartStorefront() {
                           </button>
                         </div>
                         <div className="cart-line-total" data-testid="line-total">
-                          {money(line.lineTotal, locale)}
+                          {money(line.lineTotalHalalas, locale)}
                         </div>
                         <button
                           className="btn-remove"
@@ -806,7 +882,7 @@ export function CartStorefront() {
                 </div>
                 <div className="summary-row summary-total">
                   <span>{t.subtotal}</span>
-                  <span data-testid="subtotal">{money(subtotal, locale)}</span>
+                  <span data-testid="subtotal">{money(subtotalHalalas, locale)}</span>
                 </div>
                 <p className="summary-note">{t.subtotalNote}</p>
                 <button className="btn-primary" type="button" disabled>

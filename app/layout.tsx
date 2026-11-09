@@ -1,14 +1,21 @@
 import type { Metadata } from "next";
+import { CatalogProvider } from "@/components/catalog-context";
+import { getCatalog } from "@/lib/server/catalog";
 import "./globals.css";
+
+// Pages are rebuilt at most once a minute, so catalog edits in Supabase
+// appear within 60 seconds. The cart re-checks live stock on the server.
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "Perfume Store",
   description: "A multi-brand Saudi perfume storefront",
 };
 
-export default function RootLayout(
+export default async function RootLayout(
   { children }: Readonly<{ children: React.ReactNode }>,
 ) {
+  const catalog = await getCatalog();
   return (
     <html lang="en" dir="ltr">
       <head>
@@ -23,7 +30,9 @@ export default function RootLayout(
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <CatalogProvider catalog={catalog}>{children}</CatalogProvider>
+      </body>
     </html>
   );
 }

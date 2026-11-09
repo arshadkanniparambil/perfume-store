@@ -4,13 +4,10 @@
  *
  * A cart line identifies a product *variant* (product slug + size in ml).
  * Prices, names and images are never stored in the cart; they are always read
- * from the catalog so the cart shows current, correct values.
+ * from the catalog so the cart shows current, correct values. Prices are
+ * integer halalas.
  */
-import {
-  type Product,
-  products as defaultCatalog,
-  type ProductSize,
-} from "./catalog.ts";
+import type { Product, ProductSize } from "./catalog.ts";
 
 export type CartLine = { slug: string; ml: number; quantity: number };
 export type Cart = readonly CartLine[];
@@ -19,8 +16,8 @@ export type ResolvedCartLine = CartLine & {
   id: string;
   product: Product;
   size: ProductSize;
-  unitPrice: number;
-  lineTotal: number;
+  unitPriceHalalas: number;
+  lineTotalHalalas: number;
 };
 
 export const CART_STORAGE_KEY = "perfume-store:cart:v1";
@@ -34,7 +31,7 @@ export function lineId(slug: string, ml: number) {
 export function findVariant(
   slug: string,
   ml: number,
-  catalog: readonly Product[] = defaultCatalog,
+  catalog: readonly Product[],
 ): { product: Product; size: ProductSize } | null {
   const product = catalog.find((item) => item.slug === slug);
   const size = product?.sizes.find((option) => option.ml === ml);
@@ -52,7 +49,7 @@ export function remainingStock(
   cart: Cart,
   slug: string,
   ml: number,
-  catalog: readonly Product[] = defaultCatalog,
+  catalog: readonly Product[],
 ) {
   const variant = findVariant(slug, ml, catalog);
   if (!variant) return 0;
@@ -74,8 +71,8 @@ export function addItem(
   cart: Cart,
   slug: string,
   ml: number,
-  quantity = 1,
-  catalog: readonly Product[] = defaultCatalog,
+  quantity: number,
+  catalog: readonly Product[],
 ): AddResult {
   const requested = Math.floor(quantity);
   if (!Number.isFinite(requested) || requested < 1) return { cart, added: 0 };
@@ -104,7 +101,7 @@ export function updateQuantity(
   slug: string,
   ml: number,
   quantity: number,
-  catalog: readonly Product[] = defaultCatalog,
+  catalog: readonly Product[],
 ): Cart {
   if (quantityInCart(cart, slug, ml) === 0) return cart;
   const variant = findVariant(slug, ml, catalog);
@@ -126,7 +123,7 @@ export function removeItem(cart: Cart, slug: string, ml: number): Cart {
 /** Attaches catalog data (product, size, price, totals) to each line. */
 export function resolveCart(
   cart: Cart,
-  catalog: readonly Product[] = defaultCatalog,
+  catalog: readonly Product[],
 ): ResolvedCartLine[] {
   return cart.flatMap((line) => {
     const variant = findVariant(line.slug, line.ml, catalog);
@@ -136,8 +133,8 @@ export function resolveCart(
       id: lineId(line.slug, line.ml),
       product: variant.product,
       size: variant.size,
-      unitPrice: variant.size.price,
-      lineTotal: variant.size.price * line.quantity,
+      unitPriceHalalas: variant.size.priceHalalas,
+      lineTotalHalalas: variant.size.priceHalalas * line.quantity,
     }];
   });
 }
@@ -149,10 +146,10 @@ export function cartCount(cart: Cart) {
 
 export function cartSubtotal(
   cart: Cart,
-  catalog: readonly Product[] = defaultCatalog,
+  catalog: readonly Product[],
 ) {
   return resolveCart(cart, catalog).reduce(
-    (total, line) => total + line.lineTotal,
+    (total, line) => total + line.lineTotalHalalas,
     0,
   );
 }
@@ -164,7 +161,7 @@ export function cartSubtotal(
  */
 export function sanitizeCart(
   raw: unknown,
-  catalog: readonly Product[] = defaultCatalog,
+  catalog: readonly Product[],
 ): Cart {
   if (!Array.isArray(raw)) return emptyCart;
   let cart: Cart = [];
@@ -186,14 +183,32 @@ export function serializeCart(cart: Cart) {
   );
 }
 
-export function deserializeCart(
-  value: string | null,
-  catalog: readonly Product[] = defaultCatalog,
-): Cart {
+/**
+ * Reads a stored cart without a catalog: keeps only well-formed lines with
+ * positive whole quantities and merges duplicates. Stock limits are applied
+ * later with `sanitizeCart`, once the catalog is known.
+ */
+export function deserializeCart(value: string | null): Cart {
   if (!value) return emptyCart;
+  let raw: unknown;
   try {
-    return sanitizeCart(JSON.parse(value), catalog);
+    raw = JSON.parse(value);
   } catch {
     return emptyCart;
   }
+  if (!Array.isArray(raw)) return emptyCart;
+  const lines: CartLine[] = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const { slug, ml, quantity } = entry as Record<string, unknown>;
+    if (
+      typeof slug !== "string" || !Number.isInteger(ml) ||
+      !Number.isInteger(quantity) || (quantity as number) < 1 ||
+      (ml as number) < 1
+    ) continue;
+    const existing = lines.find((line) => line.slug === slug && line.ml === ml);
+    if (existing) existing.quantity += quantity as number;
+    else lines.push({ slug, ml: ml as number, quantity: quantity as number });
+  }
+  return lines;
 }

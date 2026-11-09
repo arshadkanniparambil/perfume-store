@@ -8,16 +8,23 @@
     "start": "node node_modules/next/dist/bin/next start",
     "lint": "next lint",
     "test": "node --experimental-strip-types --no-warnings --test tests/*.test.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:db": "node --experimental-strip-types --no-warnings --test tests/db.test.ts",
+    "db:seed": "node --experimental-strip-types --no-warnings --env-file-if-exists=.env.local scripts/seed.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.119.0",
     "@types/node": "22.10.2",
     "@types/react": "19.0.2",
     "@types/react-dom": "19.0.2",
     "next": "15.1.2",
     "react": "19.0.0",
     "react-dom": "19.0.0",
-    "typescript": "5.7.2"
+    "server-only": "0.0.1",
+    "typescript": "5.7.2",
+    "zod": "4.6.7"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "postgres": "4.1.0"
+  }
 }
