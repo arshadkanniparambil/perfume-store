@@ -7,7 +7,7 @@
 export function assertNotServiceRoleKey(key: string) {
   if (key.startsWith("sb_secret_")) {
     throw new Error(
-      "SUPABASE_ANON_KEY holds a secret key. Use the publishable/anon key.",
+      "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY holds a secret key. Use the publishable key.",
     );
   }
   const [, payload] = key.split(".");
@@ -16,7 +16,7 @@ export function assertNotServiceRoleKey(key: string) {
     const claims = JSON.parse(Buffer.from(payload, "base64url").toString());
     if (claims?.role === "service_role") {
       throw new Error(
-        "SUPABASE_ANON_KEY holds the service-role key. Use the anon key.",
+        "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY holds the service-role key. Use the publishable key.",
       );
     }
   } catch (error) {

@@ -16,6 +16,7 @@ import postgres from "postgres";
 import { sampleProducts } from "../lib/sample-catalog.ts";
 import { parseCatalog } from "../lib/validation.ts";
 import { seed } from "../scripts/seed.ts";
+import { buildSeedSql } from "../scripts/generate-seed-sql.ts";
 
 const adminUrl = process.env.TEST_DATABASE_URL;
 const root = new URL("..", import.meta.url);
@@ -139,6 +140,37 @@ describe("database", { skip: !adminUrl && "TEST_DATABASE_URL not set" }, () => {
         join public.product_variants v on v.id = i.variant_id
         where v.sku = 'LATTAFA-KHAMRAH-100ML'`;
       assert.equal(reset, 2);
+    });
+  });
+
+  describe("supabase/seed.sql (for the SQL Editor)", () => {
+    test("is up to date with the sample catalog", () => {
+      const committed = readFileSync(new URL("supabase/seed.sql", root), "utf8");
+      assert.equal(committed, buildSeedSql(), "run `npm run db:seed-sql`");
+    });
+
+    test("loads exactly the sample catalog into a fresh database", async () => {
+      const name = `${dbName}_sql`;
+      await admin.unsafe(`create database ${name}`);
+      const url = new URL(adminUrl!);
+      url.pathname = `/${name}`;
+      const fresh = postgres(url.toString(), { max: 1, onnotice: () => {} });
+      try {
+        await fresh.unsafe(
+          readFileSync(new URL("tests/db/supabase-shim.sql", root), "utf8"),
+        );
+        for (const file of readdirSync(migrationsDir).sort()) {
+          await fresh.unsafe(readFileSync(new URL(file, migrationsDir), "utf8"));
+        }
+        const seedSql = readFileSync(new URL("supabase/seed.sql", root), "utf8");
+        await fresh.unsafe(seedSql);
+        await fresh.unsafe(seedSql); // running it twice is safe
+        const [row] = await fresh`select public.get_catalog() as catalog`;
+        assert.deepEqual(parseCatalog(row.catalog), sampleProducts);
+      } finally {
+        await fresh.end();
+        await admin.unsafe(`drop database if exists ${name} with (force)`);
+      }
     });
   });
 

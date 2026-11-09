@@ -10,9 +10,11 @@
     "test": "node --experimental-strip-types --no-warnings --test tests/*.test.ts",
     "typecheck": "tsc --noEmit",
     "test:db": "node --experimental-strip-types --no-warnings --test tests/db.test.ts",
-    "db:seed": "node --experimental-strip-types --no-warnings --env-file-if-exists=.env.local scripts/seed.ts"
+    "db:seed": "node --experimental-strip-types --no-warnings --env-file-if-exists=.env.local scripts/seed.ts",
+    "db:seed-sql": "node --experimental-strip-types --no-warnings scripts/generate-seed-sql.ts"
   },
   "dependencies": {
+    "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.119.0",
     "@types/node": "22.10.2",
     "@types/react": "19.0.2",

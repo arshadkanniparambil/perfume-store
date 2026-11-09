@@ -10,7 +10,7 @@ let warned = false;
 /**
  * Loads the storefront catalog from Supabase (get_catalog()).
  *
- * If SUPABASE_URL / SUPABASE_ANON_KEY are not set, the built-in sample
+ * If NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY are not set, the built-in sample
  * catalog is used instead so the site still runs without a database. If
  * Supabase IS configured and the request fails, this throws rather than
  * silently showing stale sample data.
@@ -22,7 +22,8 @@ export const getCatalog = cache(async (): Promise<Product[]> => {
       warned = true;
       console.warn(
         "[catalog] Supabase is not configured; using the sample catalog. " +
-          "Set SUPABASE_URL and SUPABASE_ANON_KEY to read from the database.",
+          "Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY " +
+          "to read from the database.",
       );
     }
     return sampleProducts;

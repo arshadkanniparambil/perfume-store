@@ -53,8 +53,22 @@ describe("browser code", () => {
     });
   }
 
+  test("no secret is ever named as a public NEXT_PUBLIC_ variable", () => {
+    for (const file of files) {
+      assert.doesNotMatch(
+        readFileSync(file, "utf8"),
+        /NEXT_PUBLIC_\w*(SECRET|SERVICE|DATABASE|PASSWORD)/,
+        file,
+      );
+    }
+  });
+
   test("server modules are marked server-only", () => {
-    for (const file of files.filter((f) => f.includes("/lib/server/"))) {
+    const serverFiles = files.filter((f) =>
+      f.includes("/lib/server/") || f.endsWith("/utils/supabase/server.ts")
+    );
+    assert.ok(serverFiles.length >= 3);
+    for (const file of serverFiles) {
       assert.match(readFileSync(file, "utf8"), /^import "server-only";/m, file);
     }
   });
